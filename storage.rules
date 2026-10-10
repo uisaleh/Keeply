@@ -1,0 +1,16 @@
+rules_version = '2';
+
+// Photos and logos (users/{uid}/attachments/{id}.jpg) and the profile photo (users/{uid}/profile.jpg).
+// Only the signed-in owner can read or write their own files; uploads must be images under 10 MB.
+// Paste this into Firebase console → Storage → Rules, then Publish.
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /users/{uid}/{allPaths=**} {
+      allow read, delete: if request.auth != null && request.auth.uid == uid;
+      allow write: if request.auth != null && request.auth.uid == uid
+        && request.resource.size < 10 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
+    // Everything else is closed.
+  }
+}

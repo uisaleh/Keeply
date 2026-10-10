@@ -1,0 +1,408 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Keeply Promo</title>
+<!--
+  Keeply promo video. Every frame is a pure function of time: render(t) poses the scene.
+  render.mjs steps t frame by frame in headless Chrome and pipes the frames to ffmpeg.
+  ?f=land (1920x1080, default) or ?f=port (1080x1920). Open in a browser to preview it live.
+-->
+<style>
+@font-face { font-family: Jakarta; font-weight: 700; src: url(../app/src/main/res/font/jakarta_bold.ttf); }
+@font-face { font-family: Jakarta; font-weight: 800; src: url(../app/src/main/res/font/jakarta_extrabold.ttf); }
+@font-face { font-family: Inter; font-weight: 400; src: url(../app/src/main/res/font/inter_regular.ttf); }
+@font-face { font-family: Inter; font-weight: 500; src: url(../app/src/main/res/font/inter_medium.ttf); }
+@font-face { font-family: Inter; font-weight: 600; src: url(../app/src/main/res/font/inter_semibold.ttf); }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: #000; overflow: hidden; }
+body { font-family: Inter, sans-serif; -webkit-font-smoothing: antialiased; }
+#stage { position: relative; overflow: hidden; background: #F5F5F2; }
+.abs { position: absolute; left: 0; top: 0; will-change: transform, opacity; }
+.bg { position: absolute; inset: 0; }
+#bg-light  { background: radial-gradient(90% 80% at 85% 0%, #FFE9DC 0%, rgba(255,233,220,0) 60%), linear-gradient(180deg, #FBF8F4 0%, #F4F2EE 100%); }
+#bg-dark   { background: radial-gradient(90% 90% at 50% 0%, #2A1A12 0%, #131315 55%, #0B0B0D 100%); }
+#bg-orange { background: linear-gradient(150deg, #FF7A3D 0%, #FF5A1F 40%, #E5400A 75%, #B8340A 100%); }
+.blob { position: absolute; border-radius: 50%; filter: blur(110px); }
+
+/* phone: native device pixels (1080x2400 screen), scaled by the pose */
+.phone { width: 1148px; height: 2468px; border-radius: 132px; background: #0D0D0F; padding: 34px;
+  box-shadow: 0 0 0 7px #2B2B30, 0 0 0 9px #4A4A50, 0 160px 260px -40px rgba(40,12,0,.42), 0 70px 110px -50px rgba(0,0,0,.55); }
+.phone.on-dark { box-shadow: 0 0 0 7px #3A3A40, 0 0 0 9px #5A5A62, 0 160px 300px -40px rgba(255,90,31,.28), 0 70px 120px -50px rgba(0,0,0,.85); }
+.screen { position: relative; width: 1080px; height: 2400px; border-radius: 98px; overflow: hidden; background: #F5F5F2; }
+.screen img, .screen .layer { position: absolute; left: 0; top: 0; width: 1080px; height: 2400px; display: block; }
+.punch { position: absolute; top: 34px; left: 50%; width: 52px; height: 52px; margin-left: -26px; border-radius: 50%; background: #050505; z-index: 20; }
+.glare { position: absolute; inset: 0; border-radius: 98px; pointer-events: none; z-index: 19;
+  background: linear-gradient(115deg, rgba(255,255,255,0) 30%, rgba(255,255,255,.16) 45%, rgba(255,255,255,0) 60%); }
+.dim { background: rgba(0,0,0,.42); }
+.tap { position: absolute; left: 0; top: 0; width: 130px; height: 130px; margin: -65px 0 0 -65px; border-radius: 50%; z-index: 18;
+  background: rgba(40,40,46,.20); box-shadow: 0 0 0 5px rgba(255,255,255,.75); }
+.ripple { position: absolute; left: 0; top: 0; width: 130px; height: 130px; margin: -65px 0 0 -65px; border-radius: 50%; z-index: 18;
+  border: 5px solid rgba(255,255,255,.9); }
+/* App lock switch, drawn over the capture so it can flip on */
+.switch { position: absolute; width: 138px; height: 82px; border-radius: 41px; z-index: 17; }
+.switch .track { position: absolute; inset: 0; border-radius: 41px; background: #FF5A1F; }
+.switch .knob { position: absolute; top: 9px; left: 9px; width: 64px; height: 64px; border-radius: 50%; background: #fff; box-shadow: 0 2px 6px rgba(0,0,0,.18); }
+
+.crop { border-radius: 30px; box-shadow: 0 40px 70px -20px rgba(30,10,0,.38), 0 0 0 1px rgba(0,0,0,.05); }
+.crop.on-dark { box-shadow: 0 40px 80px -20px rgba(0,0,0,.7), 0 0 0 1px rgba(255,255,255,.12); }
+
+.tb { position: absolute; left: 0; top: 0; }
+.tb > * { display: block; will-change: transform, opacity, filter; }
+.eb { font: 600 22px/1 Inter; letter-spacing: .16em; text-transform: uppercase; margin-bottom: 26px; display: inline-flex !important; align-items: center; gap: 12px; }
+.eb::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: currentColor; }
+.tb .ln { font: 800 84px/1.04 Jakarta; letter-spacing: -0.035em; white-space: nowrap; }
+.tb .sub { font: 400 28px/1.45 Inter; margin-top: 28px; }
+.tb em { font-style: normal; }
+.pn { margin-left: -0.09em; }
+.t-light { color: #16161A; } .t-light .eb { color: #E5400A; } .t-light .sub { color: #5B5B63; }
+.t-light em { background: linear-gradient(90deg, #FF5A1F, #C2370A); -webkit-background-clip: text; color: transparent; }
+.t-dark { color: #fff; } .t-dark .eb { color: #FF8A57; } .t-dark .sub { color: #B4B4BC; }
+.t-dark em { background: linear-gradient(90deg, #FFB48A, #FF6A33); -webkit-background-clip: text; color: transparent; }
+.t-orange { color: #fff; } .t-orange .eb { color: #FFE1A8; } .t-orange .sub { color: rgba(255,255,255,.9); }
+.t-orange em { color: #FFE1A8; }
+.port .tb { text-align: center; }
+.port .tb .ln { font-size: 92px; }
+.port .tb .sub { font-size: 34px; }
+.port .eb { font-size: 26px; }
+
+#logo { width: 168px; height: 168px; filter: drop-shadow(0 30px 40px rgba(229,64,10,.35)); }
+#word { font: 800 150px/1 Jakarta; letter-spacing: -0.045em; color: #16161A; white-space: nowrap; padding: 0 6px 18px; }
+#tag  { font: 500 34px/1 Inter; color: #5B5B63; white-space: nowrap; }
+#cta  { font: 600 28px/1 Inter; color: #fff; background: #16161A; padding: 24px 40px; border-radius: 999px; white-space: nowrap; display: flex; align-items: center; gap: 16px; }
+#cta svg { width: 30px; height: 30px; }
+</style></head>
+<body>
+<div id="stage">
+  <div id="bg-light" class="bg"></div>
+  <div id="bg-dark" class="bg"></div>
+  <div id="bg-orange" class="bg"></div>
+  <div id="blobs"></div>
+  <div id="texts"></div>
+  <div id="phones"></div>
+  <div id="crops"></div>
+  <svg id="logo" class="abs" viewBox="0 0 108 108"><defs><linearGradient id="g" x1="0" y1="0" x2="108" y2="108" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#FF6A2E"/><stop offset=".55" stop-color="#E5400A"/><stop offset="1" stop-color="#B8340A"/></linearGradient></defs><rect width="108" height="108" rx="24" fill="url(#g)"/><path fill="#fff" d="M35,35h38a3,3 0 0 1 3,3v5a3,3 0 0 1 -3,3h-38a3,3 0 0 1 -3,-3v-5a3,3 0 0 1 3,-3z"/><path fill="#fff" fill-rule="evenodd" d="M38,49h32a2,2 0 0 1 2,2v19a4,4 0 0 1 -4,4h-28a4,4 0 0 1 -4,-4v-19a2,2 0 0 1 2,-2z M48,56h12a2,2 0 0 1 0,4h-12a2,2 0 0 1 0,-4z"/></svg>
+  <div id="word" class="abs">Keeply</div>
+  <div id="tag" class="abs">Your things. Your records. Your reminders.</div>
+  <div id="cta" class="abs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg><span id="cta-text"></span></div>
+</div>
+<script>
+const CTA = 'Get it on Google Play';
+const F = new URLSearchParams(location.search).get('f') === 'port' ? 'port' : 'land';
+const LAND = F === 'land';
+const W = LAND ? 1920 : 1080, H = LAND ? 1080 : 1920;
+const DURATION = 43;
+const SCR = '../play-store-screenshots/source/screens/';
+const CROP = '../play-store-screenshots/source/crops/';
+const $ = (id) => document.getElementById(id);
+const stage = $('stage');
+stage.style.width = W + 'px'; stage.style.height = H + 'px';
+document.body.classList.add(F);
+$('cta-text').textContent = CTA;
+
+/* ---------- easing + keyframe tracks ---------- */
+const E = {
+  lin: (p) => p,
+  io: (p) => p < .5 ? 4*p*p*p : 1 - Math.pow(-2*p + 2, 3) / 2,          // in-out cubic
+  io4: (p) => p < .5 ? 8*p*p*p*p : 1 - Math.pow(-2*p + 2, 4) / 2,       // in-out quart, camera moves
+  out: (p) => 1 - Math.pow(1 - p, 4),                                  // out quart
+  outx: (p) => p === 1 ? 1 : 1 - Math.pow(2, -10 * p),                 // out expo, UI settles
+  in: (p) => p*p*p,
+};
+const DEF = { x: 0, y: 0, s: 1, rx: 0, ry: 0, rz: 0, o: 1, b: 0, clip: 0 };
+// keys: [[time, {props}, ease?], ...]; props carry forward from the previous key.
+function track(keys) {
+  keys.sort((a, b) => a[0] - b[0]);
+  let prev = { ...DEF };
+  const first = {};
+  keys.forEach(k => Object.assign(first, { ...k[1], ...first }));
+  prev = { ...DEF, ...first };
+  return keys.map(([t, p, e]) => (prev = { ...prev, ...p }, [t, prev, e || 'io']));
+}
+function sample(tr, t) {
+  if (t <= tr[0][0]) return tr[0][1];
+  for (let i = 1; i < tr.length; i++) {
+    if (t <= tr[i][0]) {
+      const [t0, a] = tr[i - 1], [t1, b, e] = tr[i];
+      const p = E[e]((t - t0) / (t1 - t0)), r = {};
+      for (const k in b) r[k] = a[k] + (b[k] - a[k]) * p;
+      return r;
+    }
+  }
+  return tr[tr.length - 1][1];
+}
+function pose(el, p, extra = {}) {
+  const x = p.x + (extra.x || 0), y = p.y + (extra.y || 0);
+  el.style.transform = `translate(${x}px,${y}px) translate(-50%,-50%) perspective(2600px) rotateX(${p.rx + (extra.rx||0)}deg) rotateY(${p.ry + (extra.ry||0)}deg) rotateZ(${p.rz}deg) scale(${p.s})`;
+  el.style.opacity = Math.max(0, Math.min(1, p.o));
+  el.style.visibility = p.o <= 0.001 ? 'hidden' : 'visible';
+  el.style.filter = p.b > 0.05 ? `blur(${p.b}px)` : '';
+  if (p.clip > 0.001) el.style.clipPath = `inset(0 ${p.clip}% 0 0)`; else el.style.clipPath = '';
+}
+// screen layers live in native screen pixels and use top-left anchoring
+function poseLayer(el, p) {
+  el.style.transform = `translate(${p.x}px,${p.y}px) scale(${p.s})`;
+  el.style.opacity = Math.max(0, Math.min(1, p.o));
+  el.style.visibility = p.o <= 0.001 ? 'hidden' : 'visible';
+}
+const anims = [];   // [el, track, kind, idleFn]
+function anim(el, keys, kind = 'pose', idle) { anims.push([el, track(keys), kind, idle]); return el; }
+
+/* ---------- scenes ---------- */
+const S = [
+  { id: 'home',  t0: 3.4,  t1: 7.5,  side: 'R', bg: 'light', eb: 'Meet Keeply', h: ['Everything important,', '<em>in one place.</em>'],
+    sub: 'Receipts, warranties, subscriptions, documents and reminders, kept together in one private vault.' },
+  { id: 'vault', t0: 7.5,  t1: 11.5, side: 'L', bg: 'light', eb: 'Your vault', h: ['Every item,', '<em>one tap away.</em>'],
+    sub: 'Filter by upcoming, favourites or type, and see what renews next.' },
+  { id: 'add',   t0: 11.5, t1: 15.5, side: 'R', bg: 'dark', eb: 'Add anything', h: ['Save it', '<em>in seconds.</em>'],
+    sub: 'Six item types, each with the right fields, plus the reminders you choose.' },
+  { id: 'detail', t0: 15.5, t1: 19.5, side: 'L', bg: 'light', eb: 'Item details', h: ['All the details,', '<em>at a glance.</em>'],
+    sub: 'Amount, next payment and reminders on one page. Mark it paid in a tap.' },
+  { id: 'remind', t0: 19.5, t1: 23.5, side: 'R', bg: 'dark', eb: 'Smart reminders', h: ['Never miss a', '<em>renewal or expiry.</em>'],
+    sub: 'A heads-up before payments, warranties and documents are due. Snooze or mark done from the alert.' },
+  { id: 'widget', t0: 23.5, t1: 27.5, side: 'L', bg: 'orange', eb: 'Home screen widget', h: ['Your spend,', '<em>always in view.</em>'],
+    sub: 'Monthly spend and your next renewal, without opening the app.' },
+  { id: 'stats', t0: 27.5, t1: 31.5, side: 'R', bg: 'light', eb: 'Insights', h: ['Know where your', '<em>money goes.</em>'],
+    sub: "Spending by month or year, what's still due, and how your vault grows." },
+  { id: 'privacy', t0: 31.5, t1: 35.5, side: 'L', bg: 'dark', eb: 'Private by design', h: ['Your vault.', '<em>Only yours.</em>'],
+    sub: 'Fingerprint or face lock, a privacy screen, and sync to your own account. No ads, no analytics.' },
+];
+const OUTRO = 35.5;
+const SC = Object.fromEntries(S.map(s => [s.id, s]));
+
+/* ---------- layout per format ---------- */
+const PS = LAND ? 0.37 : 0.47;   // phone scale
+function phonePose(side) {
+  if (LAND) return side === 'R' ? { x: 1345, y: 548, s: PS, ry: -16, rx: 3, rz: 0 } : { x: 575, y: 548, s: PS, ry: 16, rx: 3, rz: 0 };
+  return side === 'R' ? { x: 575, y: 1250, s: PS, ry: -10, rx: 4, rz: 0 } : { x: 505, y: 1250, s: PS, ry: 10, rx: 4, rz: 0 };
+}
+// x offset toward the open side of the frame
+const toward = (side, d) => side === 'R' ? -d : d;
+
+/* ---------- backgrounds ---------- */
+const BGK = { light: [], dark: [], orange: [] };
+{
+  const seq = [['light', 0], ...S.map(s => [s.bg, s.t0]), ['light', OUTRO]];
+  for (const name of Object.keys(BGK)) {
+    const keys = [];
+    seq.forEach(([bg, t], i) => {
+      const prevBg = i ? seq[i - 1][0] : bg;
+      if (bg === prevBg && i) return;
+      keys.push([Math.max(0, t - 0.1), { o: prevBg === name ? 1 : 0 }], [t + 0.9, { o: bg === name ? 1 : 0 }]);
+    });
+    if (!keys.length) keys.push([0, { o: name === 'light' ? 1 : 0 }]);
+    BGK[name] = track(keys);
+  }
+}
+const blobs = [
+  { c: 'rgba(255,122,61,.30)', w: 900, x: .88, y: .05, sp: .11 },
+  { c: 'rgba(255,184,62,.22)', w: 760, x: .08, y: .95, sp: .09 },
+  { c: 'rgba(255,90,31,.18)',  w: 640, x: .45, y: .55, sp: .07 },
+].map(b => {
+  const el = document.createElement('div'); el.className = 'blob abs';
+  Object.assign(el.style, { width: b.w + 'px', height: b.w + 'px', background: b.c });
+  $('blobs').appendChild(el); return { ...b, el };
+});
+
+/* ---------- text blocks ---------- */
+function textBlock(s) {
+  const el = document.createElement('div');
+  el.className = 'tb t-' + s.bg;
+  const w = LAND ? 760 : 940;
+  el.style.width = w + 'px';
+  el.innerHTML = `<span class="eb">${s.eb}</span>` + s.h.map(l => `<span class="ln">${l.replace(/([.,])/g, '<span class="pn">$1</span>')}</span>`).join('') + `<span class="sub">${s.sub}</span>`;
+  $('texts').appendChild(el);
+  const h = el.offsetHeight;
+  let left, top;
+  if (LAND) { left = s.side === 'R' ? 160 : 1040; top = 540 - h / 2; }
+  else { left = (W - w) / 2; top = 150; }
+  el.style.left = left + 'px'; el.style.top = top + 'px';
+  [...el.children].forEach((c, i) => {
+    c.classList.add('abs-child');
+    const tin = s.t0 + 0.55 + i * 0.08, tout = s.t1 - 0.5 + i * 0.03;
+    anims.push([c, track([
+      [tin, { y: 46, o: 0, b: 10 }], [tin + 0.9, { y: 0, o: 1, b: 0 }, 'outx'],
+      [tout, { y: 0, o: 1, b: 0 }], [tout + 0.42, { y: -26, o: 0, b: 8 }, 'in'],
+    ]), 'text']);
+  });
+}
+S.forEach(textBlock);
+
+/* ---------- phones ---------- */
+function makePhone(layers) {
+  const ph = document.createElement('div'); ph.className = 'phone abs';
+  const scr = document.createElement('div'); scr.className = 'screen';
+  ph.appendChild(scr);
+  const out = { el: ph, screen: scr, L: {} };
+  for (const [name, src, cls] of layers) {
+    let el;
+    if (src) { el = document.createElement('img'); el.src = src; }
+    else { el = document.createElement('div'); el.className = 'layer ' + (cls || ''); }
+    scr.appendChild(el); out.L[name] = el;
+  }
+  const glare = document.createElement('div'); glare.className = 'glare'; scr.appendChild(glare); out.glare = glare;
+  const punch = document.createElement('div'); punch.className = 'punch'; ph.appendChild(punch);
+  $('phones').appendChild(ph);
+  return out;
+}
+const P = makePhone([
+  ['home', SCR + 'home1.png'], ['vault', SCR + 'vault_all.png'], ['dim', null, 'dim'], ['sheet', SCR + 'addsheet.png'],
+  ['detail', SCR + 'detail_nestly1.png'], ['remind', SCR + 'settings3.png'], ['widget', SCR + 'home_widget.png'],
+  ['stats', SCR + 'profile1.png'], ['privacy', SCR + 'settings1.png'],
+]);
+// the add sheet is cut from its capture at the sheet's top edge; our own dim sits over the live vault list
+P.L.sheet.style.clipPath = 'inset(985px 0 0 0 round 64px 64px 0 0)';
+
+// screen choreography (native pixels; times absolute)
+const fadeIn = (t, d = 0.45) => [[t, { o: 0, s: 1.03 }], [t + d, { o: 1, s: 1 }, 'out']];
+anim(P.L.home, [[0, { o: 1 }]], 'layer');
+anim(P.L.vault, [...fadeIn(SC.vault.t0 + 1.25, 0.3), [SC.detail.t0 + 1.0, { x: 0 }], [SC.detail.t0 + 1.55, { x: -320 }, 'outx'], [SC.remind.t0 + 0.5, { o: 0 }]], 'layer');
+anim(P.L.dim, [[SC.add.t0 + 1.3, { o: 0 }], [SC.add.t0 + 1.7, { o: 1 }, 'out'], [SC.detail.t0 + 0.3, { o: 1 }], [SC.detail.t0 + 0.7, { o: 0 }, 'io']], 'layer');
+anim(P.L.sheet, [[SC.add.t0 + 1.3, { y: 1500, o: 1 }], [SC.add.t0 + 1.95, { y: 0 }, 'outx'], [SC.detail.t0 + 0.25, { y: 0 }], [SC.detail.t0 + 0.75, { y: 1500 }, 'in']], 'layer');
+anim(P.L.detail, [[SC.detail.t0 + 1.0, { x: 1080, o: 1 }], [SC.detail.t0 + 1.55, { x: 0 }, 'outx'], [SC.remind.t0 + 1.0, { o: 1 }], [SC.remind.t0 + 1.5, { o: 0 }]], 'layer');
+for (const id of ['remind', 'widget', 'stats', 'privacy']) {
+  const t = SC[id].t0 + 0.55;
+  anim(P.L[id], [...fadeIn(t, 0.5), [SC[id].t1 + 0.6, { o: 1 }], [SC[id].t1 + 1.1, { o: 0 }]], 'layer');
+}
+for (const id of ['remind', 'widget', 'stats', 'privacy']) P.L[id].style.zIndex = 5;
+P.L.privacy.style.zIndex = 6;
+
+// touch indicator
+const tapEl = document.createElement('div'); tapEl.className = 'tap'; P.screen.appendChild(tapEl);
+const ripEl = document.createElement('div'); ripEl.className = 'ripple'; P.screen.appendChild(ripEl);
+const TAPS = [
+  [SC.vault.t0 + 1.15, 343, 2194],     // Vault tab
+  [SC.add.t0 + 1.2, 538, 2165],        // + button
+  [SC.detail.t0 + 0.9, 520, 593],      // Nestly row
+  [SC.detail.t0 + 2.2, 540, 732],      // Mark as paid
+  [SC.privacy.t0 + 1.55, 916, 730],    // App lock switch
+];
+{
+  const tk = [], rk = [];
+  TAPS.forEach(([t, x, y]) => {
+    tk.push([t - 0.32, { x, y, o: 0, s: 1.35 }], [t - 0.12, { o: 1, s: 1 }, 'out'], [t + 0.12, { s: 0.82 }], [t + 0.42, { o: 0, s: 0.9 }, 'out']);
+    rk.push([t - 0.01, { x, y, o: 0, s: 0.8 }], [t, { o: 0.9, s: 0.8 }, 'lin'], [t + 0.55, { o: 0, s: 2.6 }, 'out']);
+  });
+  anim(tapEl, tk, 'layer'); anim(ripEl, rk, 'layer');
+}
+
+// App lock switch flips on
+const sw = document.createElement('div'); sw.className = 'switch';
+sw.innerHTML = '<div class="track"></div><div class="knob"></div>';
+Object.assign(sw.style, { left: '847px', top: '690px' });
+P.L.privacy.after(sw); sw.style.zIndex = 7;
+const swTrack = sw.firstChild, swKnob = sw.lastChild;
+anim(sw, [[SC.privacy.t0 + 0.55, { o: 0 }], [SC.privacy.t0 + 1.05, { o: 1 }], [SC.privacy.t1 + 0.6, { o: 1 }], [SC.privacy.t1 + 1.1, { o: 0 }]], 'layer');
+const swT = track([[SC.privacy.t0 + 1.6, { x: 0 }], [SC.privacy.t0 + 1.95, { x: 1 }, 'outx']]);
+
+// main phone path
+{
+  const off = LAND ? { y: H + 800 } : { y: H + 1000 };
+  const k = [[0, { ...phonePose('R'), ...off, rx: 24, ry: -24, o: 1 }], [S[0].t0 - 0.35, { ...phonePose('R'), ...off, rx: 24, ry: -24 }],
+             [S[0].t0 + 1.25, phonePose('R'), 'io4']];
+  S.forEach((s, i) => { if (i) k.push([s.t0, phonePose(S[i - 1].side)], [s.t0 + 1.05, phonePose(s.side), 'io4']); });
+  // widget scene: camera pushes in on the widget
+  const wz = SC.widget, wp = phonePose('L');
+  const zoom = LAND ? { x: 640, y: 905, s: 0.6, ry: 6, rx: 0 } : { x: 540, y: 1700, s: 0.82, ry: 0, rx: 0 };
+  k.push([wz.t0 + 1.5, wp], [wz.t0 + 3.2, zoom, 'io4'], [wz.t1, zoom], [wz.t1 + 1.05, phonePose('R'), 'io4']);
+  // outro
+  const center = LAND ? { x: 960, y: 610, s: 0.34, rx: 6, ry: 0, rz: 0 } : { x: 540, y: 980, s: 0.42, rx: 6, ry: 0, rz: 0 };
+  k.push([OUTRO, phonePose('L')], [OUTRO + 1.1, center, 'io4'], [OUTRO + 3.0, center],
+         [OUTRO + 3.7, { ...center, y: center.y + (LAND ? 1150 : 1500), rx: 18 }, 'in']);
+  anim(P.el, k.sort((a, b) => a[0] - b[0]), 'phone', (t) => ({ y: Math.sin(t * 0.9) * 6, ry: Math.sin(t * 0.55) * 1.6 }));
+}
+const darkSpans = S.filter(s => s.bg !== 'light').map(s => [s.t0 + 0.4, s.t1 + 0.4]);
+const PHONE_KEYS = anims[anims.length - 1][1];
+
+// outro fan: two more phones join the main one
+const fan = [
+  { src: 'vault_all.png', dx: LAND ? -420 : -300, rz: -6, ry: 14 },
+  { src: 'detail_nestly1.png', dx: LAND ? 420 : 300, rz: 6, ry: -14 },
+].map(f => {
+  const ph = makePhone([['s', SCR + f.src]]);
+  ph.el.style.zIndex = 0;
+  const c = LAND ? { x: 960, y: 650, s: 0.30 } : { x: 540, y: 1020, s: 0.35 };
+  anim(ph.el, [[OUTRO + 0.6, { ...c, o: 0, rx: 6, ry: 0, rz: 0 }], [OUTRO + 0.75, { o: 1 }, 'lin'],
+               [OUTRO + 1.7, { x: c.x + f.dx, y: c.y + 40, rz: f.rz, ry: f.ry }, 'io4'], [OUTRO + 3.0, {}],
+               [OUTRO + 3.7, { y: c.y + (LAND ? 1150 : 1500), rx: 18 }, 'in']], 'phone', (t) => ({ y: Math.sin(t * 0.9 + 1) * 6 }));
+  return ph;
+});
+$('phones').appendChild(P.el);
+
+/* ---------- floating UI cards (real crops) ---------- */
+function card(name, s, at, dur, posL, posP, opts = {}) {
+  const img = document.createElement('img');
+  img.src = CROP + name + '.png';
+  img.className = 'crop abs' + (s.bg !== 'light' ? ' on-dark' : '');
+  const pp = phonePose(s.side);
+  const pos = LAND ? { x: pp.x + toward(s.side, posL.dx), y: posL.y, w: posL.w } : { x: posP.x, y: posP.y, w: posP.w };
+  img.style.width = pos.w + 'px';
+  $('crops').appendChild(img);
+  const rz = opts.rz ?? (s.side === 'R' ? -2.5 : 2.5);
+  const from = opts.from || { y: pos.y + 60 };
+  anim(img, [[at, { x: pos.x, y: pos.y, ...from, s: 0.92, o: 0, b: 12, rz, ry: s.side === 'R' ? 10 : -10 }],
+             [at + 0.8, { x: pos.x, y: pos.y, s: 1, o: 1, b: 0, ry: 0 }, 'outx'],
+             [at + dur, {}], [at + dur + 0.4, { s: 0.96, o: 0, b: 8, y: pos.y - 20 }, 'in']], 'card',
+       (t) => ({ y: Math.sin(t * 1.1 + pos.x) * 8 }));
+  return img;
+}
+card('upcoming', SC.vault, SC.vault.t0 + 1.8, 1.7, { dx: 300, y: 860, w: 470 }, { x: 640, y: 1500, w: 640 });
+card('doc_remind', SC.add, SC.add.t0 + 2.2, 1.35, { dx: 300, y: 875, w: 470 }, { x: 420, y: 1520, w: 600 });
+card('mark_paid', SC.detail, SC.detail.t0 + 2.35, 1.2, { dx: 340, y: 255, w: 500 }, { x: 640, y: 920, w: 680 }, { rz: 2 });
+const notifs = [
+  card('notif_nestly', SC.remind, SC.remind.t0 + 1.2, 2.3, { dx: 30, y: 215, w: 600 }, { x: 540, y: 900, w: 880 }, { from: { y: LAND ? 110 : 780 }, rz: -1.5 }),
+  card('notif_passport', SC.remind, SC.remind.t0 + 1.75, 1.75, { dx: 70, y: 480, w: 600 }, { x: 560, y: 1290, w: 880 }, { from: { y: LAND ? 340 : 1130 }, rz: 1.5 }),
+];
+card('vault_chart', SC.stats, SC.stats.t0 + 1.7, 1.75, { dx: 290, y: 610, w: 300 }, { x: 840, y: 1340, w: 340 }, { rz: -3 });
+card('privacy', SC.privacy, SC.privacy.t0 + 2.2, 1.4, { dx: 340, y: 870, w: 500 }, { x: 600, y: 1560, w: 680 });
+
+/* ---------- logo lockup (intro + outro) ---------- */
+const logo = $('logo'), word = $('word'), tag = $('tag'), cta = $('cta');
+{
+  const lw = 168, ww = word.offsetWidth, gap = 34, total = lw + gap + ww;
+  const cy = LAND ? 470 : 860;
+  const lx = W / 2 - total / 2 + lw / 2, wx = W / 2 + total / 2 - ww / 2;
+  const T = OUTRO + 3.15;
+  anim(logo, [[0.15, { x: W / 2, y: cy, s: 0.55, o: 0, b: 16, rz: -8 }], [1.05, { s: 1, o: 1, b: 0, rz: 0 }, 'outx'],
+              [1.15, { x: W / 2 }], [1.95, { x: lx }, 'io4'], [2.95, {}], [3.5, { y: cy - 50, o: 0, b: 10 }, 'in'],
+              [T, { x: W / 2, y: cy, s: 0.6, o: 0, b: 14 }], [T + 0.8, { s: 1, o: 1, b: 0 }, 'outx'],
+              [T + 0.9, {}], [T + 1.6, { x: lx }, 'io4']]);
+  anim(word, [[1.25, { x: wx, y: cy + 4, clip: 100, o: 1, s: 1 }], [2.05, { clip: 0 }, 'io4'], [2.95, {}], [3.5, { y: cy - 46, o: 0, b: 10 }, 'in'],
+              [T + 0.98, { y: cy + 4, clip: 100, o: 0, b: 0 }], [T + 1.0, { o: 1 }, 'lin'], [T + 1.8, { clip: 0 }, 'io4']]);
+  anim(tag, [[1.85, { x: W / 2, y: cy + 150, o: 0, b: 8 }], [2.55, { y: cy + 130, o: 1, b: 0 }, 'outx'], [3.0, {}], [3.5, { y: cy + 90, o: 0, b: 8 }, 'in'],
+             [T + 1.7, { y: cy + 150, o: 0, b: 8 }], [T + 2.4, { y: cy + 130, o: 1, b: 0 }, 'outx']]);
+  anim(cta, [[T + 2.05, { x: W / 2, y: cy + 250, o: 0, b: 8, s: 0.94 }], [T + 2.75, { y: cy + 235, o: 1, b: 0, s: 1 }, 'outx']]);
+}
+
+/* ---------- render ---------- */
+function render(t) {
+  for (const k of ['light', 'dark', 'orange']) $('bg-' + k).style.opacity = sample(BGK[k], t).o;
+  const onDark = darkSpans.some(([a, b]) => t > a && t < b) && !(t > SC.widget.t0 + 0.4 && t < SC.widget.t1 + 0.4) ? 1 : 0;
+  blobs.forEach((b, i) => {
+    const x = b.x * W + Math.sin(t * b.sp + i * 2) * 120 - b.w / 2, y = b.y * H + Math.cos(t * b.sp * 1.3 + i) * 90 - b.w / 2;
+    b.el.style.transform = `translate(${x}px,${y}px)`;
+  });
+  for (const [el, tr, kind, idle] of anims) {
+    const p = sample(tr, t);
+    if (kind === 'layer') poseLayer(el, p);
+    else if (kind === 'text') { el.style.transform = `translateY(${p.y}px)`; el.style.opacity = p.o; el.style.filter = p.b > .05 ? `blur(${p.b}px)` : ''; }
+    else pose(el, p, idle ? idle(t) : {});
+  }
+  // light catches the glass as the phone turns
+  const pp = sample(PHONE_KEYS, t);
+  P.glare.style.transform = `translateX(${(pp.ry) * 28}px)`;
+  P.el.classList.toggle('on-dark', !!onDark);
+  const sv = sample(swT, t).x;
+  swTrack.style.background = `rgb(${Math.round(229 + (255 - 229) * sv)},${Math.round(229 + (90 - 229) * sv)},${Math.round(232 + (31 - 232) * sv)})`;
+  swKnob.style.transform = `translateX(${sv * 56}px) scale(${0.62 + 0.38 * sv})`;
+}
+window.render = render;
+window.DURATION = DURATION;
+window.SIZE = { W, H };
+window.ready = Promise.all([document.fonts.ready, ...[...document.images].map(i => i.decode().catch(() => {}))]);
+
+// live preview when opened in a browser
+if (!navigator.webdriver) {
+  const t0 = performance.now();
+  const loop = () => { render(((performance.now() - t0) / 1000) % DURATION); requestAnimationFrame(loop); };
+  window.ready.then(loop);
+}
+</script>
+</body></html>

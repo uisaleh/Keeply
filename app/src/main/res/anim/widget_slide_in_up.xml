@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Next renewal sliding in from below, like the app's spend card. -->
+<set xmlns:android="http://schemas.android.com/apk/res/android" android:duration="350">
+    <translate android:fromYDelta="50%" android:toYDelta="0" />
+    <alpha android:fromAlpha="0" android:toAlpha="1" />
+</set>

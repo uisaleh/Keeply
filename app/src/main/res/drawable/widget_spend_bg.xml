@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The Home spend card's brand gradient, for the home-screen widget. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <corners android:radius="24dp" />
+    <gradient
+        android:angle="315"
+        android:startColor="#FFFF5A1F"
+        android:centerColor="#FFE5400A"
+        android:endColor="#FFB8340A" />
+</shape>

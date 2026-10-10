@@ -1,0 +1,26 @@
+*.iml
+.gradle
+/local.properties
+/.idea
+.DS_Store
+/build
+/app/build
+/captures
+.externalNativeBuild
+.cxx
+
+# Release signing (never commit)
+/keystore.properties
+/keystore/
+*.jks
+
+# Release outputs (rebuild with ./gradlew :app:bundleRelease)
+*.aab
+*.apk
+*-native-debug-symbols.zip
+app/google-services.json.bak
+.kotlin
+
+# Promo video tooling
+promo-video/node_modules/
+promo-video/out/

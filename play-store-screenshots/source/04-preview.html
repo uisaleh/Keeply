@@ -1,0 +1,63 @@
+<!doctype html><html><head><meta charset="utf-8"><title>04-preview</title><style>
+@font-face { font-family: Jakarta; font-weight: 700; src: url(file:///Users/saleh/Downloads/keeply/app/src/main/res/font/jakarta_bold.ttf); }
+@font-face { font-family: Jakarta; font-weight: 800; src: url(file:///Users/saleh/Downloads/keeply/app/src/main/res/font/jakarta_extrabold.ttf); }
+@font-face { font-family: Inter; font-weight: 400; src: url(file:///Users/saleh/Downloads/keeply/app/src/main/res/font/inter_regular.ttf); }
+@font-face { font-family: Inter; font-weight: 600; src: url(file:///Users/saleh/Downloads/keeply/app/src/main/res/font/inter_semibold.ttf); }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 1080px; height: 1920px; overflow: hidden; }
+body { font-family: Inter, sans-serif; -webkit-font-smoothing: antialiased; }
+
+.canvas { position: relative; width: 1080px; height: 1920px; overflow: hidden; }
+.bg-orange { background: linear-gradient(160deg, #FF7A3D 0%, #FF5A1F 38%, #E5400A 72%, #B8340A 100%); color: #fff; }
+.bg-light  { background: linear-gradient(180deg, #FFF6F0 0%, #F5F5F2 55%, #F1EFEA 100%); color: #16161A; }
+.bg-dark   { background: radial-gradient(120% 70% at 50% 0%, #2A1A12 0%, #121214 55%, #0B0B0D 100%); color: #fff; }
+.blob { position: absolute; border-radius: 50%; filter: blur(90px); }
+.grid-lines { position: absolute; inset: 0; opacity: .06;
+  background-image: linear-gradient(currentColor 1px, transparent 1px), linear-gradient(90deg, currentColor 1px, transparent 1px);
+  background-size: 72px 72px; mask-image: linear-gradient(180deg, #000 0%, transparent 45%); }
+
+.copy { position: absolute; top: 96px; left: 0; right: 0; text-align: center; padding: 0 70px; z-index: 5; }
+.eyebrow { display: inline-flex; align-items: center; gap: 12px; font: 600 26px/1 Inter; letter-spacing: .14em; text-transform: uppercase;
+  padding: 14px 26px; border-radius: 999px; margin-bottom: 28px; }
+.eyebrow svg { width: 28px; height: 28px; }
+.bg-orange .eyebrow, .bg-dark .eyebrow { background: rgba(255,255,255,.14); color: #fff; border: 1.5px solid rgba(255,255,255,.22); }
+.bg-light .eyebrow { background: #FFE6D9; color: #C2370A; }
+h1 { font: 800 82px/1.04 Jakarta; letter-spacing: -0.035em; }
+h1 em { font-style: normal; }
+.bg-light h1 em { background: linear-gradient(90deg, #FF5A1F, #C2370A); -webkit-background-clip: text; color: transparent; }
+.bg-dark h1 em { background: linear-gradient(90deg, #FFB48A, #FF6A33); -webkit-background-clip: text; color: transparent; }
+.bg-orange h1 em { color: #FFE1A8; }
+.sub { font: 400 32px/1.4 Inter; margin: 24px auto 0; max-width: 900px; }
+.bg-light .sub { color: #5B5B63; }
+.bg-orange .sub { color: rgba(255,255,255,.9); }
+.bg-dark .sub { color: #B4B4BC; }
+
+/* phone: screen keeps the device's 1080x2400 aspect */
+.phone { position: absolute; left: 50%; top: 590px; width: 632px; height: 1365px; margin-left: -316px; border-radius: 82px;
+  background: #0D0D0F; padding: 16px; z-index: 3;
+  box-shadow: 0 0 0 3px #2B2B30, 0 60px 120px -20px rgba(40,10,0,.45), 0 30px 60px -30px rgba(0,0,0,.5); }
+.bg-dark .phone { box-shadow: 0 0 0 3px #3A3A40, 0 60px 140px -20px rgba(255,90,31,.25), 0 30px 60px -30px rgba(0,0,0,.8); }
+.screen { position: relative; width: 600px; height: 1333px; border-radius: 68px; overflow: hidden; background: #F5F5F2; }
+.screen img { width: 100%; height: 100%; display: block; }
+.punch { position: absolute; top: 14px; left: 50%; width: 22px; height: 22px; margin-left: -11px; border-radius: 50%; background: #050505; z-index: 2; }
+
+/* real UI cards cut from the captures */
+.crop { position: absolute; z-index: 8; border-radius: 30px;
+  filter: drop-shadow(0 28px 40px rgba(30,10,0,.32)) drop-shadow(0 0 1px rgba(0,0,0,.12)); }
+.bg-dark .crop { filter: drop-shadow(0 28px 50px rgba(0,0,0,.6)) drop-shadow(0 0 1px rgba(255,255,255,.2)); }
+.badge { position: absolute; z-index: 8; display: inline-flex; align-items: center; gap: 14px; padding: 18px 28px 18px 18px; border-radius: 999px;
+  font: 600 27px Inter; background: #fff; color: #16161A; box-shadow: 0 24px 50px -16px rgba(30,10,0,.35); }
+.badge .t { width: 52px; height: 52px; border-radius: 16px; display: grid; place-items: center; }
+.badge svg { width: 30px; height: 30px; }
+.t-orange { background: #FFEADF; color: #E5400A; }
+.t-green  { background: #E2F5E7; color: #15803D; }
+.t-violet { background: #EFE9FF; color: #6D3FE0; }
+.t-pink   { background: #FCE7F3; color: #BE185D; }
+.t-teal   { background: #DDF4F1; color: #0F766E; }
+</style></head>
+<body><div class="canvas bg-light"><div class="blob" style="width:760px;height:760px;right:-300px;top:-260px;background:rgba(255,122,61,.28)"></div><div class="blob" style="width:620px;height:620px;left:-320px;top:980px;background:rgba(255,184,62,.22)"></div><div class="grid-lines"></div>
+  <div class="copy"><div class="eyebrow"><i data-lucide="file-search"></i>Item preview</div><h1>All the details, <em>at a glance</em></h1><p class="sub">Amount, next payment and reminders on one page. Private numbers stay hidden until you tap Show.</p></div>
+  <div class="phone"><div class="screen"><img src="file:///Users/saleh/Downloads/keeply/play-store-screenshots/source/screens/detail_nestly1.png"><div class="punch"></div></div></div>
+  <img class="crop" src="file:///Users/saleh/Downloads/keeply/play-store-screenshots/source/crops/doc_number.png" style="left:30px;top:1580px;width:560px;transform:rotate(-3deg)">
+</div><script src="https://cdn.jsdelivr.net/npm/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+<script>lucide.createIcons({ attrs: { 'stroke-width': 2 } });</script></body></html>

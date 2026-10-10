@@ -1,0 +1,54 @@
+<!doctype html><html><head><meta charset="utf-8"><title>feature-graphic</title><style>
+@font-face { font-family: Jakarta; font-weight: 800; src: url(file:///Users/saleh/Downloads/keeply/app/src/main/res/font/jakarta_extrabold.ttf); }
+@font-face { font-family: Inter; font-weight: 400; src: url(file:///Users/saleh/Downloads/keeply/app/src/main/res/font/inter_regular.ttf); }
+@font-face { font-family: Inter; font-weight: 600; src: url(file:///Users/saleh/Downloads/keeply/app/src/main/res/font/inter_semibold.ttf); }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 1024px; height: 500px; overflow: hidden; }
+body { font-family: Inter, sans-serif; -webkit-font-smoothing: antialiased; }
+
+/* Play Store feature graphic: 1024x500. Keep key content away from the edges. */
+.canvas { position: relative; width: 1024px; height: 500px; overflow: hidden; color: #fff;
+  background: linear-gradient(135deg, #FF7A3D 0%, #FF5A1F 35%, #E5400A 70%, #B8340A 100%); }
+.blob { position: absolute; border-radius: 50%; filter: blur(70px); }
+.grid-lines { position: absolute; inset: 0; opacity: .07;
+  background-image: linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px);
+  background-size: 40px 40px; mask-image: linear-gradient(90deg, #000 0%, transparent 60%); }
+
+.copy { position: absolute; left: 72px; top: 0; bottom: 0; width: 520px; display: flex; flex-direction: column; justify-content: center; z-index: 5; }
+.brand { display: flex; align-items: center; gap: 14px; margin-bottom: 26px; }
+.brand .logo { width: 56px; height: 56px; border-radius: 16px; background: rgba(255,255,255,.16); border: 1.5px solid rgba(255,255,255,.28);
+  display: grid; place-items: center; }
+.brand .logo img { width: 34px; height: 34px; }
+.brand span { font: 800 34px/1 Jakarta; letter-spacing: -0.02em; }
+h1 { font: 800 50px/1.06 Jakarta; letter-spacing: -0.035em; }
+h1 em { font-style: normal; color: #FFE1A8; }
+.sub { font: 400 19px/1.45 Inter; color: rgba(255,255,255,.9); margin-top: 16px; max-width: 470px; }
+
+.phone { position: absolute; left: 640px; top: 46px; width: 290px; height: 626px; border-radius: 40px; background: #0D0D0F; padding: 8px; z-index: 3;
+  transform: rotate(-6deg); box-shadow: 0 0 0 2px #2B2B30, 0 40px 80px -10px rgba(60,10,0,.55); }
+.screen { width: 274px; height: 610px; border-radius: 33px; overflow: hidden; background: #F5F5F2; }
+.screen img { width: 100%; height: 100%; display: block; object-fit: cover; object-position: top; }
+
+.badge { position: absolute; z-index: 8; display: inline-flex; align-items: center; gap: 10px; padding: 10px 18px 10px 10px; border-radius: 999px;
+  font: 600 16px Inter; background: #fff; color: #16161A; box-shadow: 0 18px 36px -12px rgba(40,10,0,.45); white-space: nowrap; }
+.badge .t { width: 34px; height: 34px; border-radius: 11px; display: grid; place-items: center; }
+.badge svg { width: 19px; height: 19px; }
+.t-orange { background: #FFEADF; color: #E5400A; }
+.t-green  { background: #E2F5E7; color: #15803D; }
+</style></head>
+<body><div class="canvas">
+  <div class="blob" style="width:520px;height:520px;right:-120px;top:-260px;background:rgba(255,220,160,.45)"></div>
+  <div class="blob" style="width:460px;height:460px;left:-200px;bottom:-300px;background:rgba(120,20,0,.45)"></div>
+  <div class="grid-lines"></div>
+
+  <div class="copy">
+    <div class="brand"><div class="logo"><img src="file:///Users/saleh/Downloads/keeply/brand/keeply-mark-white.svg"></div><span>Keeply</span></div>
+    <h1>Everything important, <em>in one place</em></h1>
+    <p class="sub">Receipts, warranties, subscriptions and documents, with reminders before anything is due.</p>
+  </div>
+
+  <div class="phone"><div class="screen"><img src="file:///Users/saleh/Downloads/keeply/play-store-screenshots/source/screens/home1.png"></div></div>
+  <div class="badge" style="left:548px;top:408px;transform:rotate(-3deg)"><span class="t t-orange"><i data-lucide="bell-ring"></i></span>Nestly renews in 2 days</div>
+  <div class="badge" style="left:790px;top:118px;transform:rotate(4deg)"><span class="t t-green"><i data-lucide="shield-check"></i></span>Warranty saved</div>
+</div><script src="https://cdn.jsdelivr.net/npm/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+<script>lucide.createIcons({ attrs: { 'stroke-width': 2 } });</script></body></html>
